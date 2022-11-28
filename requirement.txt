@@ -1,0 +1,7 @@
+PySide6
+PySide6-Addons
+PySide6-Essential
+pyqtdarktheme
+opencv-python
+sk-video
+numpy
