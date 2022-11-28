@@ -62,6 +62,7 @@ import time
 import cv2
 import numpy as np
 import qdarktheme
+import skvideo.io
 
 from rubbish_gui import Ui_MainWindow
 
@@ -102,6 +103,13 @@ category = {
     "鹅卵石": "其他垃圾",
 }
 item_list = list(category.keys())
+video_file = "test.mp4"
+videoCapture = cv2.VideoCapture(video_file)
+fps = videoCapture.get(cv2.CAP_PROP_FPS)
+video_frame_num = int(videoCapture.get(cv2.CAP_PROP_FRAME_COUNT))
+video_width = int(videoCapture.get(cv2.CAP_PROP_FRAME_WIDTH))
+video_height = int(videoCapture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+videoCapture.release()
 
 
 def set_color(widget, rgb):
@@ -117,26 +125,53 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.progressBin2.progress_color = colors["厨余垃圾"]
         self.progressBin3.progress_color = colors["有害垃圾"]
         self.progressBin4.progress_color = colors["其他垃圾"]
+        set_color(self.labelBin1, colors["可回收垃圾"])
+        set_color(self.labelBin2, colors["厨余垃圾"])
+        set_color(self.labelBin3, colors["有害垃圾"])
+        set_color(self.labelBin4, colors["其他垃圾"])
         self.labelSystem.setText("正在初始化...")
         self.labelResult.setText("等待识别")
 
+        self.video_timer = QTimer()
+        self.video_timer.timeout.connect(self.read_video)
+
         self.image_temp = None
         self.test_temp = 0
+        self.test_add = 1
         self.testtimer = QTimer()
         self.testtimer.timeout.connect(self.test)
         self.testtimer.start(100)
 
+        self.start_video()
+
     def test(self):
-        self.image_temp = cv2.imread("test.png")
         random_item = random.choice(item_list)
         rec_category = category[random_item]
         self.set_recognize_result(rec_category, random_item)
         self.add_recognized_item(rec_category, random_item)
         self.labelSystem.setText("正在识别...")
-        self.show_image(self.image_temp)
-        self.test_temp += 1
+        self.test_temp += self.test_add
+        if self.test_temp == 100:
+            self.test_add = -1
+        elif self.test_temp == 0:
+            self.test_add = 1
         self.update_bin_progress(*([self.test_temp] * 4))
         self.progressProcess.setValue(self.test_temp)
+
+    def start_video(self):
+        self.videogen = skvideo.io.vreader(video_file)
+        self.video_timer.start(1000 / fps)
+
+    def stop_video(self):
+        self.video_timer.stop()
+        self.videogen.close()
+
+    def read_video(self):
+        try:
+            self.frame = next(self.videogen)
+            self.show_image(self.frame)
+        except StopIteration:
+            self.stop_video()
 
     def update_bin_progress(self, percent1, percent2, percent3, percent4):
         for i, percent in enumerate([percent1, percent2, percent3, percent4]):
@@ -151,9 +186,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 label.setFont(QFont(font, 12, QFont.Bold))
                 progress.text_color = warning_color
             else:
-                set_color(getattr(self, f"labelBin{i + 1}"), text_color)
                 if "满" in label.text():
                     label.setText(label.text().replace("(满)", ""))
+                set_color(getattr(self, f"labelBin{i + 1}"), colors[label.text()])
                 label.setFont(QFont(font, 12))
                 progress.text_color = text_color
 

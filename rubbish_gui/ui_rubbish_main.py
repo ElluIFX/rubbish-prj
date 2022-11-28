@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'rubbish_mainHGXDjU.ui'
+## Form generated from reading UI file 'rubbish_mainaAMghv.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.4.0
 ##
@@ -26,7 +26,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(1067, 688)
+        MainWindow.resize(971, 645)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.verticalLayout_2 = QVBoxLayout(self.centralwidget)
@@ -87,7 +87,7 @@ class Ui_MainWindow(object):
         self.progressProcess = QProgressBar(self.frameInfo)
         self.progressProcess.setObjectName(u"progressProcess")
         self.progressProcess.setStyleSheet(u"QProgressBar::chunk {   background-color:#23A173;}")
-        self.progressProcess.setValue(24)
+        self.progressProcess.setValue(0)
 
         self.verticalLayout_4.addWidget(self.progressProcess)
 
@@ -124,7 +124,7 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(self.progressBin1.sizePolicy().hasHeightForWidth())
         self.progressBin1.setSizePolicy(sizePolicy)
         self.progressBin1.setStyleSheet(u"QProgressBar::chunk {   background-color:#23A173;}")
-        self.progressBin1.setValue(24)
+        self.progressBin1.setValue(0)
 
         self.verticalLayout_6.addWidget(self.progressBin1)
 
@@ -149,7 +149,7 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(self.progressBin2.sizePolicy().hasHeightForWidth())
         self.progressBin2.setSizePolicy(sizePolicy)
         self.progressBin2.setStyleSheet(u"QProgressBar::chunk {   background-color:#23A173;}")
-        self.progressBin2.setValue(24)
+        self.progressBin2.setValue(0)
 
         self.verticalLayout_7.addWidget(self.progressBin2)
 
@@ -171,7 +171,7 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(self.progressBin3.sizePolicy().hasHeightForWidth())
         self.progressBin3.setSizePolicy(sizePolicy)
         self.progressBin3.setStyleSheet(u"QProgressBar::chunk {   background-color:#23A173;}")
-        self.progressBin3.setValue(24)
+        self.progressBin3.setValue(0)
 
         self.verticalLayout_8.addWidget(self.progressBin3)
 
@@ -193,7 +193,7 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(self.progressBin4.sizePolicy().hasHeightForWidth())
         self.progressBin4.setSizePolicy(sizePolicy)
         self.progressBin4.setStyleSheet(u"QProgressBar::chunk {   background-color:#23A173;}")
-        self.progressBin4.setValue(24)
+        self.progressBin4.setValue(0)
         self.progressBin4.setAlignment(Qt.AlignLeading|Qt.AlignLeft|Qt.AlignVCenter)
 
         self.verticalLayout_9.addWidget(self.progressBin4)
@@ -233,7 +233,7 @@ class Ui_MainWindow(object):
         self.scrollAreaLog.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 336, 492))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 311, 460))
         self.verticalLayout = QVBoxLayout(self.scrollAreaWidgetContents)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.label_3 = QLabel(self.scrollAreaWidgetContents)

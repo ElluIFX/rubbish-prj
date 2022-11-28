@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1067</width>
-    <height>688</height>
+    <width>971</width>
+    <height>645</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -113,7 +113,7 @@
             <string notr="true">QProgressBar::chunk {   background-color:#23A173;}</string>
            </property>
            <property name="value">
-            <number>24</number>
+            <number>0</number>
            </property>
            <property name="format">
             <string/>
@@ -173,7 +173,7 @@
                 <string notr="true">QProgressBar::chunk {   background-color:#23A173;}</string>
                </property>
                <property name="value">
-                <number>24</number>
+                <number>0</number>
                </property>
                <property name="format">
                 <string/>
@@ -212,7 +212,7 @@
                 <string notr="true">QProgressBar::chunk {   background-color:#23A173;}</string>
                </property>
                <property name="value">
-                <number>24</number>
+                <number>0</number>
                </property>
                <property name="format">
                 <string/>
@@ -251,7 +251,7 @@
                 <string notr="true">QProgressBar::chunk {   background-color:#23A173;}</string>
                </property>
                <property name="value">
-                <number>24</number>
+                <number>0</number>
                </property>
                <property name="format">
                 <string/>
@@ -290,7 +290,7 @@
                 <string notr="true">QProgressBar::chunk {   background-color:#23A173;}</string>
                </property>
                <property name="value">
-                <number>24</number>
+                <number>0</number>
                </property>
                <property name="alignment">
                 <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -361,8 +361,8 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>336</width>
-           <height>492</height>
+           <width>311</width>
+           <height>460</height>
           </rect>
          </property>
          <layout class="QVBoxLayout" name="verticalLayout">
