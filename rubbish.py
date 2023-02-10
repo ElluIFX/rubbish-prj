@@ -58,6 +58,7 @@ pyside imports
 
 import random
 import time
+import warnings
 
 import cv2
 import numpy as np
@@ -105,7 +106,7 @@ category = {
 item_list = list(category.keys())
 video_file = "test.mp4"
 videoCapture = cv2.VideoCapture(video_file)
-fps = videoCapture.get(cv2.CAP_PROP_FPS)
+video_fps = videoCapture.get(cv2.CAP_PROP_FPS)
 video_frame_num = int(videoCapture.get(cv2.CAP_PROP_FRAME_COUNT))
 video_width = int(videoCapture.get(cv2.CAP_PROP_FRAME_WIDTH))
 video_height = int(videoCapture.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -117,10 +118,69 @@ def set_color(widget, rgb):
     widget.setStyleSheet(f"color: {color}")
 
 
+class fps_counter:
+    def __init__(self, max_sample=40) -> None:
+        self.t = time.time()
+        self.max_sample = max_sample
+        self.t_list = []
+
+    def tick(self) -> None:
+        self.t_list.append(time.time() - self.t)
+        self.t = time.time()
+        if len(self.t_list) > self.max_sample:
+            self.t_list.pop(0)
+
+    @property
+    def fps(self) -> float:
+        length = len(self.t_list)
+        sum_t = sum(self.t_list)
+        if length == 0:
+            return 0.0
+        else:
+            return length / sum_t
+
+
+fpsc = fps_counter()
+
+
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
         self.setupUi(self)
+        self.init_timers()
+        self.init_widgets()
+        self.setGeometry(0, 0, 1024, 700)
+        self.image_temp = None
+        self.cap = cv2.VideoCapture()
+        for i in range(10):
+            self.cap.open(i)
+            if self.cap.isOpened():
+                print(f"Opened camera {i}")
+                break
+        if not self.cap.isOpened():
+            warnings.warn("No camera found")
+        self.test_temp = 0
+        self.test_add = 1
+        self.testtimer = QTimer()
+        self.testtimer.timeout.connect(self.test)
+        self.testtimer.start(100)
+
+        # self.start_video()
+        self.start_camera(60)
+
+    def test(self):
+        random_item = random.choice(item_list)
+        rec_category = category[random_item]
+        self.set_recognize_result(rec_category, random_item)
+        self.add_recognized_item(rec_category, random_item)
+        self.test_temp += self.test_add
+        if self.test_temp == 100:
+            self.test_add = -1
+        elif self.test_temp == 0:
+            self.test_add = 1
+        self.update_bin_progress(*([self.test_temp] * 4))
+
+    def init_widgets(self):
         self.progressBin1.progress_color = colors["可回收垃圾"]
         self.progressBin2.progress_color = colors["厨余垃圾"]
         self.progressBin3.progress_color = colors["有害垃圾"]
@@ -131,47 +191,61 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         set_color(self.labelBin4, colors["其他垃圾"])
         self.labelSystem.setText("正在初始化...")
         self.labelResult.setText("等待识别")
+        self.progressProcess.setMaximum(100)
 
+    def init_timers(self):
         self.video_timer = QTimer()
+        self.video_timer.setTimerType(Qt.PreciseTimer)
         self.video_timer.timeout.connect(self.read_video)
+        self.camera_timer = QTimer()
+        self.camera_timer.timeout.connect(self.read_camera)
+        self.processbar_timer = QTimer()
+        self.processbar_timer.timeout.connect(self.update_processbar)
 
-        self.image_temp = None
-        self.test_temp = 0
-        self.test_add = 1
-        self.testtimer = QTimer()
-        self.testtimer.timeout.connect(self.test)
-        self.testtimer.start(100)
+    def update_processbar(self):
+        current = self.progressProcess.value()
+        if current == 100:
+            self.processbar_timer.stop()
+            return
+        self.progressProcess.setValue(current + 1)
 
-        self.start_video()
+    def start_processbar(self, estimate_time):
+        self.progressProcess.setValue(0)
+        self.processbar_timer.start(estimate_time * 1000 / 100)
 
-    def test(self):
-        random_item = random.choice(item_list)
-        rec_category = category[random_item]
-        self.set_recognize_result(rec_category, random_item)
-        self.add_recognized_item(rec_category, random_item)
-        self.labelSystem.setText("正在识别...")
-        self.test_temp += self.test_add
-        if self.test_temp == 100:
-            self.test_add = -1
-        elif self.test_temp == 0:
-            self.test_add = 1
-        self.update_bin_progress(*([self.test_temp] * 4))
-        self.progressProcess.setValue(self.test_temp)
+    def finish_processbar(self):
+        self.progressProcess.setValue(100)
+        self.processbar_timer.stop()
 
     def start_video(self):
         self.videogen = skvideo.io.vreader(video_file)
-        self.video_timer.start(1000 / fps)
+        self.video_timer.start(1000 / video_fps)
+        self.labelSystem.setText("播放公益视频")
 
     def stop_video(self):
         self.video_timer.stop()
         self.videogen.close()
 
+    def start_camera(self, fps=30):
+        self.camera_timer.start(1000 / fps)
+
+    def stop_camera(self):
+        self.camera_timer.stop()
+
     def read_video(self):
         try:
             self.frame = next(self.videogen)
             self.show_image(self.frame)
+            fpsc.tick()
+            print(f"fps: {fpsc.fps}")
         except StopIteration:
             self.stop_video()
+
+    def read_camera(self):
+        ret, self.frame = self.cap.read()
+        if ret:
+            self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
+            self.show_image(self.frame)
 
     def update_bin_progress(self, percent1, percent2, percent3, percent4):
         for i, percent in enumerate([percent1, percent2, percent3, percent4]):
