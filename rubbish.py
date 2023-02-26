@@ -83,7 +83,7 @@ colors = {
 }
 text_color = "#FCFCFC"
 warning_color = "#EB1900"
-warning_percent = 90
+warning_percent = 80
 font = "更纱黑体 UI SC"
 emoji = {
     "1号电池": "🔋",
@@ -127,6 +127,13 @@ api = FC_Controller()
 def set_color(widget, rgb):
     color = f"rgb({rgb[0]},{rgb[1]},{rgb[2]})" if isinstance(rgb, tuple) else rgb
     widget.setStyleSheet(f"color: {color}")
+
+
+def set_bar_color(widget, rgb):
+    color = f"rgb({rgb[0]},{rgb[1]},{rgb[2]})" if isinstance(rgb, tuple) else rgb
+    widget.setStyleSheet(
+        "QProgressBar::chunk " + "{" + f"background-color: {color};" + "}"
+    )
 
 
 class fps_counter:
@@ -181,6 +188,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setGeometry(0, 0, 1024, 700)
         self.misThread.start()
         self.image_temp = None
+        self.update_bin_progress(90, 80, 40, 20)
 
     def init_timers(self):
         self.processbar_timer = QTimer()
@@ -207,10 +215,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         sig.stop_video_signal.connect(self.stop_video)
 
     def init_widgets(self):
-        # self.progressBin1.progress_color = colors["可回收垃圾"]
-        # self.progressBin2.progress_color = colors["厨余垃圾"]
-        # self.progressBin3.progress_color = colors["有害垃圾"]
-        # self.progressBin4.progress_color = colors["其他垃圾"]
+        set_bar_color(self.progressBin1, colors["可回收垃圾"])
+        set_bar_color(self.progressBin2, colors["厨余垃圾"])
+        set_bar_color(self.progressBin3, colors["有害垃圾"])
+        set_bar_color(self.progressBin4, colors["其他垃圾"])
         set_color(self.labelBin1, colors["可回收垃圾"])
         set_color(self.labelBin2, colors["厨余垃圾"])
         set_color(self.labelBin3, colors["有害垃圾"])
@@ -235,7 +243,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.processbar_timer.stop()
 
     def update_bin_progress(self, percent1, percent2, percent3, percent4):
-        return
         for i, percent in enumerate([percent1, percent2, percent3, percent4]):
             percent = min(percent, 100)
             label: QLabel = getattr(self, f"labelBin{i + 1}")
@@ -243,14 +250,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             progress.setValue(percent)
             if percent > warning_percent:
                 set_color(label, warning_color)
-                if "满" not in label.text():
-                    label.setText(f"{label.text()}(满)")
+                if "未满" in label.text():
+                    label.setText(f"{label.text().replace('未满','即将装满')}")
                 label.setFont(QFont(font, 12, QFont.Bold))
                 progress.text_color = warning_color
             else:
-                if "满" in label.text():
-                    label.setText(label.text().replace("(满)", ""))
-                set_color(getattr(self, f"labelBin{i + 1}"), colors[label.text()])
+                if "即将装满" in label.text():
+                    label.setText(label.text().replace("即将装满", "未满"))
+                set_color(
+                    getattr(self, f"labelBin{i + 1}"),
+                    colors[label.text().replace("\n未满", "")],
+                )
                 label.setFont(QFont(font, 12))
                 progress.text_color = text_color
 

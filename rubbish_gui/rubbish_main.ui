@@ -143,6 +143,12 @@
         <layout class="QVBoxLayout" name="verticalLayout_10">
          <item>
           <widget class="QLabel" name="label_5">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>36</height>
+            </size>
+           </property>
            <property name="font">
             <font>
              <family>更纱黑体 UI SC</family>
@@ -160,7 +166,7 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_5">
            <item>
-            <layout class="QVBoxLayout" name="verticalLayout_6" stretch="0">
+            <layout class="QVBoxLayout" name="verticalLayout_6" stretch="0,0">
              <item>
               <widget class="QLabel" name="labelBin1">
                <property name="font">
@@ -170,17 +176,43 @@
                 </font>
                </property>
                <property name="text">
-                <string>可回收垃圾</string>
+                <string>可回收垃圾
+未满</string>
                </property>
                <property name="alignment">
                 <set>Qt::AlignCenter</set>
                </property>
               </widget>
              </item>
+             <item>
+              <widget class="QProgressBar" name="progressBin1">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>30</height>
+                </size>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">QProgressBar::chunk {   background-color:#23A173;}</string>
+               </property>
+               <property name="value">
+                <number>50</number>
+               </property>
+               <property name="format">
+                <string/>
+               </property>
+              </widget>
+             </item>
             </layout>
            </item>
            <item>
-            <layout class="QVBoxLayout" name="verticalLayout_7" stretch="0">
+            <layout class="QVBoxLayout" name="verticalLayout_7" stretch="0,0">
              <item>
               <widget class="QLabel" name="labelBin2">
                <property name="font">
@@ -190,17 +222,43 @@
                 </font>
                </property>
                <property name="text">
-                <string>厨余垃圾</string>
+                <string>厨余垃圾
+未满</string>
                </property>
                <property name="alignment">
                 <set>Qt::AlignCenter</set>
                </property>
               </widget>
              </item>
+             <item>
+              <widget class="QProgressBar" name="progressBin2">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>30</height>
+                </size>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">QProgressBar::chunk {   background-color:#23A173;}</string>
+               </property>
+               <property name="value">
+                <number>50</number>
+               </property>
+               <property name="format">
+                <string/>
+               </property>
+              </widget>
+             </item>
             </layout>
            </item>
            <item>
-            <layout class="QVBoxLayout" name="verticalLayout_8" stretch="0">
+            <layout class="QVBoxLayout" name="verticalLayout_8" stretch="0,0">
              <item>
               <widget class="QLabel" name="labelBin3">
                <property name="font">
@@ -210,17 +268,43 @@
                 </font>
                </property>
                <property name="text">
-                <string>有害垃圾</string>
+                <string>有害垃圾
+未满</string>
                </property>
                <property name="alignment">
                 <set>Qt::AlignCenter</set>
                </property>
               </widget>
              </item>
+             <item>
+              <widget class="QProgressBar" name="progressBin3">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>30</height>
+                </size>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">QProgressBar::chunk {   background-color:#23A173;}</string>
+               </property>
+               <property name="value">
+                <number>50</number>
+               </property>
+               <property name="format">
+                <string/>
+               </property>
+              </widget>
+             </item>
             </layout>
            </item>
            <item>
-            <layout class="QVBoxLayout" name="verticalLayout_9" stretch="0">
+            <layout class="QVBoxLayout" name="verticalLayout_9" stretch="0,0">
              <item>
               <widget class="QLabel" name="labelBin4">
                <property name="font">
@@ -230,10 +314,39 @@
                 </font>
                </property>
                <property name="text">
-                <string>其他垃圾</string>
+                <string>其他垃圾
+未满</string>
                </property>
                <property name="alignment">
                 <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QProgressBar" name="progressBin4">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>30</height>
+                </size>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">QProgressBar::chunk {   background-color:#23A173;}</string>
+               </property>
+               <property name="value">
+                <number>50</number>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+               </property>
+               <property name="format">
+                <string/>
                </property>
               </widget>
              </item>
