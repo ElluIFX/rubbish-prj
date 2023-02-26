@@ -5,7 +5,7 @@ sys.path.append(os.path.dirname(__file__))
 
 """Add parent directory to path"""
 
-from PySide6.QtCore import (
+from PyQt5.QtCore import (
     QCoreApplication,
     QDate,
     QDateTime,
@@ -20,9 +20,9 @@ from PySide6.QtCore import (
     QTime,
     QTimer,
     QUrl,
-    Signal,
 )
-from PySide6.QtGui import (
+from PyQt5.QtCore import pyqtSignal as Signal
+from PyQt5.QtGui import (
     QBrush,
     QColor,
     QConicalGradient,
@@ -40,7 +40,7 @@ from PySide6.QtGui import (
     QRadialGradient,
     QTransform,
 )
-from PySide6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QApplication,
     QFrame,
     QHBoxLayout,
@@ -207,10 +207,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         sig.stop_video_signal.connect(self.stop_video)
 
     def init_widgets(self):
-        self.progressBin1.progress_color = colors["可回收垃圾"]
-        self.progressBin2.progress_color = colors["厨余垃圾"]
-        self.progressBin3.progress_color = colors["有害垃圾"]
-        self.progressBin4.progress_color = colors["其他垃圾"]
+        # self.progressBin1.progress_color = colors["可回收垃圾"]
+        # self.progressBin2.progress_color = colors["厨余垃圾"]
+        # self.progressBin3.progress_color = colors["有害垃圾"]
+        # self.progressBin4.progress_color = colors["其他垃圾"]
         set_color(self.labelBin1, colors["可回收垃圾"])
         set_color(self.labelBin2, colors["厨余垃圾"])
         set_color(self.labelBin3, colors["有害垃圾"])
@@ -235,6 +235,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.processbar_timer.stop()
 
     def update_bin_progress(self, percent1, percent2, percent3, percent4):
+        return
         for i, percent in enumerate([percent1, percent2, percent3, percent4]):
             percent = min(percent, 100)
             label: QLabel = getattr(self, f"labelBin{i + 1}")
@@ -353,7 +354,7 @@ class MissionThread(QObject):
 
     def run(self):
         while True:
-            for i in range(0,10):
+            for i in range(0, 10):
                 cam.open(i)
                 if cam.isOpened():
                     logger.info(f"Opened camera {i}")
@@ -405,19 +406,19 @@ class MissionThread(QObject):
         api.wait_for_step_idle(api.STEP2)
 
     def work(self):
-        while True:
-            ret, frame = cam.read()
-            if not ret:
-                continue
-            self.show_image(frame)
-        
-        time.sleep(1)
-        sig.set_system_status_signal.emit("等待控制器连接中...")
-        api.wait_for_connection(-1)
-        sig.set_system_status_signal.emit("控制器连接成功")
-        api.step_set_speed(api.STEP1 | api.STEP2, self.rotation_speed)
-        time.sleep(1)
-        self.calibration()
+        # while True:
+        #     ret, frame = cam.read()
+        #     if not ret:
+        #         continue
+        #     self.show_image(frame)
+        sig.start_video_signal.emit()
+        # time.sleep(1)
+        # sig.set_system_status_signal.emit("等待控制器连接中...")
+        # api.wait_for_connection(-1)
+        # sig.set_system_status_signal.emit("控制器连接成功")
+        # api.step_set_speed(api.STEP1 | api.STEP2, self.rotation_speed)
+        # time.sleep(1)
+        # self.calibration()
 
 
 if __name__ == "__main__":

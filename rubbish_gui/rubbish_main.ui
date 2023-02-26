@@ -160,26 +160,7 @@
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout_5">
            <item>
-            <layout class="QVBoxLayout" name="verticalLayout_6" stretch="1,0">
-             <item>
-              <widget class="PyCircularProgress" name="progressBin1">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="styleSheet">
-                <string notr="true">QProgressBar::chunk {   background-color:#23A173;}</string>
-               </property>
-               <property name="value">
-                <number>0</number>
-               </property>
-               <property name="format">
-                <string/>
-               </property>
-              </widget>
-             </item>
+            <layout class="QVBoxLayout" name="verticalLayout_6" stretch="0">
              <item>
               <widget class="QLabel" name="labelBin1">
                <property name="font">
@@ -199,26 +180,7 @@
             </layout>
            </item>
            <item>
-            <layout class="QVBoxLayout" name="verticalLayout_7" stretch="1,0">
-             <item>
-              <widget class="PyCircularProgress" name="progressBin2">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="styleSheet">
-                <string notr="true">QProgressBar::chunk {   background-color:#23A173;}</string>
-               </property>
-               <property name="value">
-                <number>0</number>
-               </property>
-               <property name="format">
-                <string/>
-               </property>
-              </widget>
-             </item>
+            <layout class="QVBoxLayout" name="verticalLayout_7" stretch="0">
              <item>
               <widget class="QLabel" name="labelBin2">
                <property name="font">
@@ -238,26 +200,7 @@
             </layout>
            </item>
            <item>
-            <layout class="QVBoxLayout" name="verticalLayout_8" stretch="1,0">
-             <item>
-              <widget class="PyCircularProgress" name="progressBin3">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="styleSheet">
-                <string notr="true">QProgressBar::chunk {   background-color:#23A173;}</string>
-               </property>
-               <property name="value">
-                <number>0</number>
-               </property>
-               <property name="format">
-                <string/>
-               </property>
-              </widget>
-             </item>
+            <layout class="QVBoxLayout" name="verticalLayout_8" stretch="0">
              <item>
               <widget class="QLabel" name="labelBin3">
                <property name="font">
@@ -277,29 +220,7 @@
             </layout>
            </item>
            <item>
-            <layout class="QVBoxLayout" name="verticalLayout_9" stretch="1,0">
-             <item>
-              <widget class="PyCircularProgress" name="progressBin4">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="styleSheet">
-                <string notr="true">QProgressBar::chunk {   background-color:#23A173;}</string>
-               </property>
-               <property name="value">
-                <number>0</number>
-               </property>
-               <property name="alignment">
-                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-               </property>
-               <property name="format">
-                <string/>
-               </property>
-              </widget>
-             </item>
+            <layout class="QVBoxLayout" name="verticalLayout_9" stretch="0">
              <item>
               <widget class="QLabel" name="labelBin4">
                <property name="font">
@@ -466,13 +387,6 @@
    </layout>
   </widget>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>PyCircularProgress</class>
-   <extends>QProgressBar</extends>
-   <header>gui</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>
