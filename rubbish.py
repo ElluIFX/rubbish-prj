@@ -16,9 +16,11 @@ from PySide6.QtCore import (
     QRect,
     QSize,
     Qt,
+    QThread,
     QTime,
     QTimer,
     QUrl,
+    Signal,
 )
 from PySide6.QtGui import (
     QBrush,
@@ -46,6 +48,8 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QMainWindow,
+    QProgressBar,
+    QProgressDialog,
     QScrollArea,
     QSizePolicy,
     QVBoxLayout,
@@ -56,7 +60,10 @@ from PySide6.QtWidgets import (
 pyside imports
 """
 
+import os
 import random
+import shutil
+import sys
 import time
 import warnings
 
@@ -65,6 +72,7 @@ import numpy as np
 import qdarktheme
 import skvideo.io
 
+from H750_STEP.python_sdk.FlightController import FC_Controller, logger
 from rubbish_gui import Ui_MainWindow
 
 colors = {
@@ -104,13 +112,16 @@ category = {
     "鹅卵石": "其他垃圾",
 }
 item_list = list(category.keys())
-video_file = "test.mp4"
+video_file = r"test_h264.mp4"
 videoCapture = cv2.VideoCapture(video_file)
 video_fps = videoCapture.get(cv2.CAP_PROP_FPS)
 video_frame_num = int(videoCapture.get(cv2.CAP_PROP_FRAME_COUNT))
 video_width = int(videoCapture.get(cv2.CAP_PROP_FRAME_WIDTH))
 video_height = int(videoCapture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 videoCapture.release()
+cam = cv2.VideoCapture()
+api = FC_Controller()
+# api.start_listen_serial("COM11", 115200)
 
 
 def set_color(widget, rgb):
@@ -120,13 +131,14 @@ def set_color(widget, rgb):
 
 class fps_counter:
     def __init__(self, max_sample=40) -> None:
-        self.t = time.time()
+        self.t = time.perf_counter()
         self.max_sample = max_sample
         self.t_list = []
 
     def tick(self) -> None:
-        self.t_list.append(time.time() - self.t)
-        self.t = time.time()
+        now = time.perf_counter()
+        self.t_list.append(now - self.t)
+        self.t = now
         if len(self.t_list) > self.max_sample:
             self.t_list.pop(0)
 
@@ -143,42 +155,56 @@ class fps_counter:
 fpsc = fps_counter()
 
 
+class MySignal(QObject):
+    image_signal = Signal(np.ndarray)
+    start_processbar_signal = Signal(int)
+    finish_processbar_signal = Signal()
+    update_bin_progress_signal = Signal(int, int, int, int)
+    set_system_status_signal = Signal(str)
+    set_recognize_result_signal = Signal(str, str)
+    add_recognized_item_signal = Signal(str, str)
+    start_video_signal = Signal()
+    stop_video_signal = Signal()
+
+
+sig = MySignal()
+
+
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
         self.setupUi(self)
-        self.init_timers()
         self.init_widgets()
+        self.init_timers()
+        self.init_threads()
+        self.init_signals()
         self.setGeometry(0, 0, 1024, 700)
+        self.misThread.start()
         self.image_temp = None
-        self.cap = cv2.VideoCapture()
-        for i in range(10):
-            self.cap.open(i)
-            if self.cap.isOpened():
-                print(f"Opened camera {i}")
-                break
-        if not self.cap.isOpened():
-            warnings.warn("No camera found")
-        self.test_temp = 0
-        self.test_add = 1
-        self.testtimer = QTimer()
-        self.testtimer.timeout.connect(self.test)
-        self.testtimer.start(100)
 
-        # self.start_video()
-        self.start_camera(60)
+    def init_timers(self):
+        self.processbar_timer = QTimer()
+        self.processbar_timer.timeout.connect(self.update_processbar)
+        self.video_timer = QTimer()
+        self.video_timer.setTimerType(Qt.PreciseTimer)
+        self.video_timer.timeout.connect(self.read_video)
 
-    def test(self):
-        random_item = random.choice(item_list)
-        rec_category = category[random_item]
-        self.set_recognize_result(rec_category, random_item)
-        self.add_recognized_item(rec_category, random_item)
-        self.test_temp += self.test_add
-        if self.test_temp == 100:
-            self.test_add = -1
-        elif self.test_temp == 0:
-            self.test_add = 1
-        self.update_bin_progress(*([self.test_temp] * 4))
+    def init_threads(self):
+        self.misThread = QThread()
+        self.worker = MissionThread()
+        self.worker.moveToThread(self.misThread)
+        self.misThread.started.connect(self.worker.run)
+
+    def init_signals(self):
+        sig.image_signal.connect(self.show_image)
+        sig.start_processbar_signal.connect(self.start_processbar)
+        sig.finish_processbar_signal.connect(self.finish_processbar)
+        sig.set_recognize_result_signal.connect(self.set_recognize_result)
+        sig.add_recognized_item_signal.connect(self.add_recognized_item)
+        sig.update_bin_progress_signal.connect(self.update_bin_progress)
+        sig.set_system_status_signal.connect(self.set_system_status)
+        sig.start_video_signal.connect(self.start_video)
+        sig.stop_video_signal.connect(self.stop_video)
 
     def init_widgets(self):
         self.progressBin1.progress_color = colors["可回收垃圾"]
@@ -192,15 +218,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.labelSystem.setText("正在初始化...")
         self.labelResult.setText("等待识别")
         self.progressProcess.setMaximum(100)
-
-    def init_timers(self):
-        self.video_timer = QTimer()
-        self.video_timer.setTimerType(Qt.PreciseTimer)
-        self.video_timer.timeout.connect(self.read_video)
-        self.camera_timer = QTimer()
-        self.camera_timer.timeout.connect(self.read_camera)
-        self.processbar_timer = QTimer()
-        self.processbar_timer.timeout.connect(self.update_processbar)
 
     def update_processbar(self):
         current = self.progressProcess.value()
@@ -217,41 +234,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.progressProcess.setValue(100)
         self.processbar_timer.stop()
 
-    def start_video(self):
-        self.videogen = skvideo.io.vreader(video_file)
-        self.video_timer.start(1000 / video_fps)
-        self.labelSystem.setText("播放公益视频")
-
-    def stop_video(self):
-        self.video_timer.stop()
-        self.videogen.close()
-
-    def start_camera(self, fps=30):
-        self.camera_timer.start(1000 / fps)
-
-    def stop_camera(self):
-        self.camera_timer.stop()
-
-    def read_video(self):
-        try:
-            self.frame = next(self.videogen)
-            self.show_image(self.frame)
-            fpsc.tick()
-            print(f"fps: {fpsc.fps}")
-        except StopIteration:
-            self.stop_video()
-
-    def read_camera(self):
-        ret, self.frame = self.cap.read()
-        if ret:
-            self.frame = cv2.cvtColor(self.frame, cv2.COLOR_BGR2RGB)
-            self.show_image(self.frame)
-
     def update_bin_progress(self, percent1, percent2, percent3, percent4):
         for i, percent in enumerate([percent1, percent2, percent3, percent4]):
             percent = min(percent, 100)
-            label = getattr(self, f"labelBin{i + 1}")
-            progress = getattr(self, f"progressBin{i + 1}")
+            label: QLabel = getattr(self, f"labelBin{i + 1}")
+            progress: QProgressBar = getattr(self, f"progressBin{i + 1}")
             progress.setValue(percent)
             if percent > warning_percent:
                 set_color(label, warning_color)
@@ -266,6 +253,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 label.setFont(QFont(font, 12))
                 progress.text_color = text_color
 
+    def set_system_status(self, status):
+        self.labelSystem.setText(status)
+
     def set_recognize_result(self, category, name):
         self.labelResult.setText(f"{name} ({category})")
         set_color(self.labelResult, colors[category])
@@ -278,18 +268,156 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.listWidgetLog.addItem(item)
         self.listWidgetLog.scrollToBottom()
 
+    def start_video(self):
+        time.sleep(1)
+        self.videogen = skvideo.io.vreader(video_file)
+        self.video_timer.start(1000 / video_fps)
+
+    def stop_video(self):
+        self.video_timer.stop()
+        self.videogen.close()
+
+    def read_video(self):
+        try:
+            frame = next(self.videogen)
+            self.show_image(frame)
+        except StopIteration:
+            self.stop_video()
+
     def show_image(self, image: np.ndarray):
+        fpsc.tick()
+        self._image = image.copy()
+        cv2.putText(
+            self._image,
+            f"{fpsc.fps:.2f}FPS",
+            (10, 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1,
+            (255, 255, 0),
+            2,
+        )
         self.pixmap = QPixmap.fromImage(
-            QImage(image, image.shape[1], image.shape[0], QImage.Format.Format_RGB888)
+            QImage(
+                self._image,
+                self._image.shape[1],
+                self._image.shape[0],
+                QImage.Format.Format_RGB888,
+            )
         ).scaled(self.labelVideo.width(), self.labelVideo.height(), Qt.KeepAspectRatio)
         self.labelVideo.setPixmap(self.pixmap)
+        self.image_temp = self._image
 
     def resizeEvent(self, event) -> None:
         if self.image_temp is not None:
-            self.show_image(self.image_temp)
-        if self.isMaximized():
-            self.showFullScreen()
+            self.pixmap = QPixmap.fromImage(
+                QImage(
+                    self.image_temp,
+                    self.image_temp.shape[1],
+                    self.image_temp.shape[0],
+                    QImage.Format.Format_RGB888,
+                )
+            ).scaled(
+                self.labelVideo.width(), self.labelVideo.height(), Qt.KeepAspectRatio
+            )
+            self.labelVideo.setPixmap(self.pixmap)
         return super().resizeEvent(event)
+
+    # F11 全屏
+    def keyPressEvent(self, event) -> None:
+        if event.key() == Qt.Key_F11:
+            if self.isFullScreen():
+                self.showNormal()
+            else:
+                self.showFullScreen()
+        return super().keyPressEvent(event)
+
+    def closeEvent(self, event) -> None:
+        self.misThread.quit()
+        return super().closeEvent(event)
+
+
+class MissionThread(QObject):
+    ### 设置
+    rotation_speed = 45
+
+    ### 变量
+    sight_pos = 1  # 当前视角位置 一共六格
+    down_pos = 0  # 下盘位置 一共六格
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def show_image(self, image: np.ndarray):
+        self._image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        sig.image_signal.emit(self._image)
+
+    def run(self):
+        while True:
+            for i in range(0,10):
+                cam.open(i)
+                if cam.isOpened():
+                    logger.info(f"Opened camera {i}")
+                    break
+            if not cam.isOpened():
+                logger.warn("No camera found")
+                sig.set_system_status_signal.emit(f"错误: 未找到摄像头")
+            else:
+                sig.set_system_status_signal.emit(f"摄像头已连接")
+                break
+        while True:
+            try:
+                self.work()
+            except Exception as e:
+                sig.set_system_status_signal.emit(f"任务线程异常, 正在重启...")
+                logger.exception(e)
+                time.sleep(1)
+            else:
+                sig.set_system_status_signal.emit("任务线程正常退出")
+                break
+
+    def calibration(self):
+        sig.set_system_status_signal.emit("正在校准储物盘")
+        time.sleep(1)
+        sig.set_system_status_signal.emit("校准完成")
+        time.sleep(1)
+
+    def left(self):
+        self.sight_pos = (self.sight_pos + 1) % 6
+        api.step_rotate_abs(api.STEP1, self.sight_pos * 60)
+        api.step_rotate_abs(api.STEP2, (self.sight_pos - self.down_pos) * 60)
+        api.wait_for_step_idle(api.STEP1 | api.STEP2)
+
+    def right(self):
+        self.sight_pos = (self.sight_pos - 1) % 6
+        api.step_rotate_abs(api.STEP1, self.sight_pos * 60)
+        api.step_rotate_abs(api.STEP2, (self.sight_pos - self.down_pos) * 60)
+        api.wait_for_step_idle(api.STEP1 | api.STEP2)
+
+    def goto(self, pos):
+        self.sight_pos = pos
+        api.step_rotate_abs(api.STEP1, self.sight_pos * 60)
+        api.step_rotate_abs(api.STEP2, (self.sight_pos - self.down_pos) * 60)
+        api.wait_for_step_idle(api.STEP1 | api.STEP2)
+
+    def release_next(self):
+        self.down_pos = self.down_pos + 1
+        api.step_rotate_abs(api.STEP2, (self.sight_pos - self.down_pos) * 60)
+        api.wait_for_step_idle(api.STEP2)
+
+    def work(self):
+        while True:
+            ret, frame = cam.read()
+            if not ret:
+                continue
+            self.show_image(frame)
+        
+        time.sleep(1)
+        sig.set_system_status_signal.emit("等待控制器连接中...")
+        api.wait_for_connection(-1)
+        sig.set_system_status_signal.emit("控制器连接成功")
+        api.step_set_speed(api.STEP1 | api.STEP2, self.rotation_speed)
+        time.sleep(1)
+        self.calibration()
 
 
 if __name__ == "__main__":

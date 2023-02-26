@@ -1,0 +1,234 @@
+[INFO] (2023-02-23 18:14:18)
+[FC] Serial port opened
+[INFO] (2023-02-23 18:14:18)
+[FC] listen serial thread started
+[INFO] (2023-02-23 18:14:39)
+[FC] Serial port opened
+[INFO] (2023-02-23 18:14:39)
+[FC] listen serial thread started
+[INFO] (2023-02-23 18:16:12)
+[FC] Serial port opened
+[INFO] (2023-02-23 18:16:12)
+[FC] listen serial thread started
+[INFO] (2023-02-23 18:16:28)
+[FC] Serial port opened
+[INFO] (2023-02-23 18:16:28)
+[FC] listen serial thread started
+[ERROR] (2023-02-23 18:16:29)
+test
+Traceback (most recent call last):
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 353, in run
+    self.work()
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 361, in work
+    raise Exception("test")
+Exception: test
+[ERROR] (2023-02-23 18:16:30)
+test
+Traceback (most recent call last):
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 353, in run
+    self.work()
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 361, in work
+    raise Exception("test")
+Exception: test
+[ERROR] (2023-02-23 18:16:31)
+test
+Traceback (most recent call last):
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 353, in run
+    self.work()
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 361, in work
+    raise Exception("test")
+Exception: test
+[ERROR] (2023-02-23 18:16:32)
+test
+Traceback (most recent call last):
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 353, in run
+    self.work()
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 361, in work
+    raise Exception("test")
+Exception: test
+[ERROR] (2023-02-23 18:16:33)
+test
+Traceback (most recent call last):
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 353, in run
+    self.work()
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 361, in work
+    raise Exception("test")
+Exception: test
+[ERROR] (2023-02-23 18:16:34)
+test
+Traceback (most recent call last):
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 353, in run
+    self.work()
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 361, in work
+    raise Exception("test")
+Exception: test
+[ERROR] (2023-02-23 18:16:35)
+test
+Traceback (most recent call last):
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 353, in run
+    self.work()
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 361, in work
+    raise Exception("test")
+Exception: test
+[ERROR] (2023-02-23 18:16:36)
+test
+Traceback (most recent call last):
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 353, in run
+    self.work()
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 361, in work
+    raise Exception("test")
+Exception: test
+[ERROR] (2023-02-23 18:16:37)
+test
+Traceback (most recent call last):
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 353, in run
+    self.work()
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 361, in work
+    raise Exception("test")
+Exception: test
+[INFO] (2023-02-23 18:17:03)
+[FC] Serial port opened
+[INFO] (2023-02-23 18:17:03)
+[FC] listen serial thread started
+[ERROR] (2023-02-23 18:17:04)
+test
+Traceback (most recent call last):
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 353, in run
+    self.work()
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 362, in work
+    raise Exception("test")
+Exception: test
+[ERROR] (2023-02-23 18:17:06)
+test
+Traceback (most recent call last):
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 353, in run
+    self.work()
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 362, in work
+    raise Exception("test")
+Exception: test
+[ERROR] (2023-02-23 18:17:08)
+test
+Traceback (most recent call last):
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 353, in run
+    self.work()
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 362, in work
+    raise Exception("test")
+Exception: test
+[ERROR] (2023-02-23 18:17:10)
+test
+Traceback (most recent call last):
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 353, in run
+    self.work()
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 362, in work
+    raise Exception("test")
+Exception: test
+[INFO] (2023-02-23 18:17:39)
+[FC] Serial port opened
+[INFO] (2023-02-23 18:17:39)
+[FC] listen serial thread started
+[WARNING] (2023-02-23 18:17:42)
+[FC] wait for fc connection timeout
+[WARNING] (2023-02-23 18:17:46)
+[FC] wait for fc connection timeout
+[WARNING] (2023-02-23 18:17:50)
+[FC] wait for fc connection timeout
+[INFO] (2023-02-23 18:18:32)
+[FC] Serial port opened
+[INFO] (2023-02-23 18:18:32)
+[FC] listen serial thread started
+[WARNING] (2023-02-23 18:18:35)
+[FC] wait for fc connection timeout
+[INFO] (2023-02-23 18:20:23)
+[FC] Serial port opened
+[INFO] (2023-02-23 18:20:23)
+[FC] listen serial thread started
+[INFO] (2023-02-23 18:20:42)
+Opened camera 1
+[INFO] (2023-02-23 18:20:42)
+[FC] Serial port opened
+[INFO] (2023-02-23 18:20:42)
+[FC] listen serial thread started
+[WARNING] (2023-02-23 18:20:46)
+[FC] wait for fc connection timeout
+[INFO] (2023-02-23 18:21:19)
+Opened camera 1
+[INFO] (2023-02-23 18:21:19)
+[FC] Serial port opened
+[INFO] (2023-02-23 18:21:19)
+[FC] listen serial thread started
+[INFO] (2023-02-23 18:21:31)
+Opened camera 1
+[INFO] (2023-02-23 18:21:31)
+[FC] Serial port opened
+[INFO] (2023-02-23 18:21:31)
+[FC] listen serial thread started
+[WARNING] (2023-02-23 18:21:35)
+[FC] wait for fc connection timeout
+[INFO] (2023-02-23 18:28:09)
+[FC] Serial port opened
+[INFO] (2023-02-23 18:28:09)
+[FC] listen serial thread started
+[INFO] (2023-02-23 18:28:09)
+Opened camera 1
+[WARNING] (2023-02-23 18:28:12)
+[FC] wait for fc connection timeout
+[WARNING] (2023-02-23 18:28:12)
+[FC] ACK timeout, retry - 3
+[WARNING] (2023-02-23 18:28:12)
+[FC] ACK timeout, retry - 2
+[WARNING] (2023-02-23 18:28:13)
+[FC] ACK timeout, retry - 1
+[ERROR] (2023-02-23 18:28:13)
+Wait ACK reached max retry
+[ERROR] (2023-02-23 18:28:13)
+Wait ACK reached max retry
+Traceback (most recent call last):
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 364, in run
+    self.work()
+  File "d:\PersonalDocument\Code\git\rubbish\rubbish.py", line 378, in work
+    api.step_set_speed(api.STEP1 | api.STEP2 | api.STEP3, self.rotation_speed)
+  File "d:\PersonalDocument\Code\git\rubbish\H750_STEP\python_sdk\FlightController\Protocal.py", line 63, in step_set_speed
+    self._send_command(0x01, self._byte_temp1.bytes + self._byte_temp2.bytes)
+  File "d:\PersonalDocument\Code\git\rubbish\H750_STEP\python_sdk\FlightController\Protocal.py", line 52, in _send_command
+    sended = self.send_data_to_fc(data, option, need_ack=need_ack)
+  File "d:\PersonalDocument\Code\git\rubbish\H750_STEP\python_sdk\FlightController\Base.py", line 343, in send_data_to_fc
+    return self.send_data_to_fc(
+  File "d:\PersonalDocument\Code\git\rubbish\H750_STEP\python_sdk\FlightController\Base.py", line 343, in send_data_to_fc
+    return self.send_data_to_fc(
+  File "d:\PersonalDocument\Code\git\rubbish\H750_STEP\python_sdk\FlightController\Base.py", line 343, in send_data_to_fc
+    return self.send_data_to_fc(
+  File "d:\PersonalDocument\Code\git\rubbish\H750_STEP\python_sdk\FlightController\Base.py", line 328, in send_data_to_fc
+    raise Exception("Wait ACK reached max retry")
+Exception: Wait ACK reached max retry
+[INFO] (2023-02-23 18:29:56)
+[FC] Serial port opened
+[INFO] (2023-02-23 18:29:56)
+[FC] listen serial thread started
+[INFO] (2023-02-23 18:29:56)
+Opened camera 1
+[INFO] (2023-02-23 18:30:29)
+[FC] Serial port opened
+[INFO] (2023-02-23 18:30:29)
+[FC] listen serial thread started
+[INFO] (2023-02-23 18:30:30)
+Opened camera 1
+[INFO] (2023-02-23 18:33:05)
+[FC] Serial port opened
+[INFO] (2023-02-23 18:33:05)
+[FC] listen serial thread started
+[INFO] (2023-02-23 18:33:05)
+Opened camera 1
+[INFO] (2023-02-23 18:33:21)
+[FC] Serial port opened
+[INFO] (2023-02-23 18:33:21)
+[FC] listen serial thread started
+[INFO] (2023-02-23 18:33:22)
+Opened camera 1
+[INFO] (2023-02-24 16:24:44)
+Opened camera 0
+[INFO] (2023-02-24 16:25:23)
+Opened camera 2
+[INFO] (2023-02-24 16:25:40)
+Opened camera 0
+[INFO] (2023-02-24 16:26:06)
+Opened camera 0
