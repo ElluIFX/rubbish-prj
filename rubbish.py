@@ -600,6 +600,7 @@ class MissionThread(QObject):
         last_recognize_time = time.time()
         playing_video = False
         yolo = DAMO_YOLO(drawOutput=True)
+        count = 0
         while True:
             time.sleep(0.01)
             while self.calibrating:
@@ -627,64 +628,73 @@ class MissionThread(QObject):
             api.step_rotate_abs(api.STEP1, deg + 60)
             if not playing_video:
                 self.system_info("识别中 ...")
-                frame = mask_ROI(
-                    img,
-                    (
-                        (831, 186),
-                        (550, 589),
-                        (736, 711),
-                        (913, 740),
-                        (1097, 711),
-                        (1249, 616),
-                        (994, 186),
-                    ),
-                )
-                result = yolo.detect(frame)
+            frame = mask_ROI(
+                img,
+                (
+                    (831, 186),
+                    (550, 589),
+                    (736, 711),
+                    (913, 740),
+                    (1097, 711),
+                    (1249, 616),
+                    (994, 186),
+                ),
+            )
+            result = yolo.detect(frame)
 
-                if not playing_video:
-                    self.show_image(frame)
-                if len(result) == 0:
-                    self.idle = True
-                    continue
-                self.idle = False
-                if playing_video:
-                    playing_video = False
-                    sig.stop_video_signal.emit()
-                    self.system_info("识别到垃圾")
-                    self.show_image(frame)
-                logger.info(f"识别结果: {result}")
-                if len(result) > 1:
-                    result = sorted(result, key=lambda x: x[2], reverse=True)
-                name = translate[result[0][1]]
-                category = categories[name]
-                sig.set_recognize_result_signal.emit(name)
-                sig.add_recognized_item_signal.emit(name)
-                if category == "可回收垃圾":
-                    api.step_rotate(api.STEP2, self.to_khs_down)
-                    api.wait_for_step_idle(api.STEP2)
-                    api.step_rotate(api.STEP1, self.to_khs_up)
-                elif category == "有害垃圾":
-                    api.step_rotate(api.STEP2, self.to_yh_down)
-                    api.wait_for_step_idle(api.STEP2)
-                    api.step_rotate(api.STEP1, self.to_yh_up)
-                elif category == "厨余垃圾":
-                    api.step_rotate(api.STEP2, self.to_cy_down)
-                    api.wait_for_step_idle(api.STEP2)
-                    api.step_rotate(api.STEP1, self.to_cy_up)
-                elif category == "其他垃圾":
-                    api.step_rotate(api.STEP2, self.to_qt_down)
-                    api.wait_for_step_idle(api.STEP2)
-                    api.step_rotate(api.STEP1, self.to_qt_up)
-                else:
-                    raise ValueError(f"Invalid category: {category}")
-                api.wait_for_step_idle(api.STEP1 | api.STEP2)
-                time.sleep(2)
-                api.step_rotate_abs(api.STEP2, 0)
+            if not playing_video:
+                self.show_image(frame)
+            if len(result) == 0:
+                self.idle = True
+                continue
+            self.idle = False
+            if playing_video:
+                playing_video = False
+                sig.stop_video_signal.emit()
+                self.system_info("识别到垃圾")
+                self.show_image(frame)
+            logger.info(f"识别结果: {result}")
+            if len(result) > 1:
+                result = sorted(result, key=lambda x: x[2], reverse=True)
+            name = translate[result[0][1]]
+            category = categories[name]
+            sig.set_recognize_result_signal.emit(name)
+            sig.add_recognized_item_signal.emit(name)
+            if category == "可回收垃圾":
+                api.step_rotate(api.STEP2, self.to_khs_down)
                 api.wait_for_step_idle(api.STEP2)
-                deg = round(api.state.step1_target_angle.value / 60) * 60
-                api.step_rotate_abs(api.STEP1, deg)
-                api.wait_for_step_idle(api.STEP1 | api.STEP2)
-                last_recognize_time = time.time()
+                api.step_rotate(api.STEP1, self.to_khs_up)
+            elif category == "有害垃圾":
+                api.step_rotate(api.STEP2, self.to_yh_down)
+                api.wait_for_step_idle(api.STEP2)
+                api.step_rotate(api.STEP1, self.to_yh_up)
+            elif category == "厨余垃圾":
+                api.step_rotate(api.STEP2, self.to_cy_down)
+                api.wait_for_step_idle(api.STEP2)
+                api.step_rotate(api.STEP1, self.to_cy_up)
+            elif category == "其他垃圾":
+                api.step_rotate(api.STEP2, self.to_qt_down)
+                api.wait_for_step_idle(api.STEP2)
+                api.step_rotate(api.STEP1, self.to_qt_up)
+            else:
+                raise ValueError(f"Invalid category: {category}")
+            api.wait_for_step_idle(api.STEP1 | api.STEP2)
+            time.sleep(2)
+            api.step_rotate_abs(api.STEP2, 0)
+            api.wait_for_step_idle(api.STEP2)
+            deg = round(api.state.step1_target_angle.value / 60) * 60
+            api.step_rotate_abs(api.STEP1, deg)
+            api.wait_for_step_idle(api.STEP1 | api.STEP2)
+            last_recognize_time = time.time()
+            count += 1
+            if count == 10:
+                self.system_info("正在压缩可回收垃圾")
+                count = 0
+                self.compress()
+                self.system_info("压缩完成")
+
+        def compress(self):
+            pass
 
 
 if __name__ == "__main__":
