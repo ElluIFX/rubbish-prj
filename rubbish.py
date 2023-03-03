@@ -72,9 +72,14 @@ import cv2
 import numpy as np
 import qdarktheme
 import skvideo.io
-
 from H750_STEP.python_sdk.FlightController import FC_Controller, logger
 from rubbish_gui import Ui_MainWindow
+from smbus2 import SMBus
+from Vision import mask_ROI
+from Vision_Net import DAMO_YOLO
+
+from drivers.pca9548a import PCA9548A
+from drivers.vl53l0x import VL53L0X
 
 colors = {
     "可回收垃圾": "#80EB57",
@@ -99,7 +104,7 @@ emoji = {
     "瓷片": "🍽️",
     "鹅卵石": "🗿",
 }
-category = {
+categories = {
     "1号电池": "有害垃圾",
     "2号电池": "有害垃圾",
     "5号电池": "有害垃圾",
@@ -126,7 +131,7 @@ translate = {
     "rock": "鹅卵石",
 }
 
-item_list = list(category.keys())
+item_list = list(categories.keys())
 video_file = r"test_h264.mp4"
 videoCapture = cv2.VideoCapture(video_file)
 video_fps = videoCapture.get(cv2.CAP_PROP_FPS)
@@ -140,8 +145,20 @@ cam_width = 1920
 cam_height = 1080
 cam_event = Event()
 api = FC_Controller()
-api.start_listen_serial("COM3", 115200)
+api.start_listen_serial("/dev/ttyS4", 500000, print_state=False)
 api.settings.strict_ack_check = False
+mux = PCA9548A(BusNum=7)
+lasers = []
+LASER_NUM = 6
+
+for i in range(LASER_NUM):
+    mux.switch(i)
+    time.sleep(0.1)
+    try:
+        lasers.append(VL53L0X(bus=7))
+    except:
+        logger.error(f"Failed to initialize laser {i}")
+        pass
 
 
 def set_color(widget, rgb):
@@ -154,6 +171,22 @@ def set_bar_color(widget, rgb):
     widget.setStyleSheet(
         "QProgressBar::chunk " + "{" + f"background-color: {color};" + "}"
     )
+
+
+def laser_read(i):
+    mux.switch(i)
+    return lasers[i].measure()
+
+
+def laser_read_all():
+    rd = []
+    for i in range(LASER_NUM):
+        try:
+            rd.append(laser_read(i))
+        except:
+            rd.append(1000)
+            logger.error(f"Failed to read laser {i}")
+    return rd
 
 
 class fps_counter:
@@ -191,8 +224,8 @@ class MySignal(QObject):
     finish_processbar_signal = Signal()
     update_bin_progress_signal = Signal(int, int, int, int)
     set_system_status_signal = Signal(str)
-    set_recognize_result_signal = Signal(str, str)
-    add_recognized_item_signal = Signal(str, str)
+    set_recognize_result_signal = Signal(str)
+    add_recognized_item_signal = Signal(str)
     start_video_signal = Signal()
     stop_video_signal = Signal()
     cam_thread_start_signal = Signal()
@@ -297,11 +330,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def set_system_status(self, status):
         self.labelSystem.setText(status)
 
-    def set_recognize_result(self, category, name):
+    def set_recognize_result(self, name):
+        category = categories[name]
         self.labelResult.setText(f"{name} ({category})")
         set_color(self.labelResult, colors[category])
 
-    def add_recognized_item(self, category, name):
+    def add_recognized_item(self, name):
+        category = categories[name]
         time_str = time.strftime("%H:%M:%S", time.localtime())
         item = QListWidgetItem(f"{time_str} {category}-{name}")
         item.setForeground(QColor(colors[category]))
@@ -401,11 +436,23 @@ class CameraThread(QObject):
 
 class MissionThread(QObject):
     ### 设置
-    rotation_speed = 60
+    rotation_speed_up = 60
+    rotation_speed_down = 40
     push_speed = 200
     rec_offset = 105
     max_push = 7000
-    idle_delay = 30  # 空闲视频等待时间
+    offset = 10
+    offset_down = 10
+    idle_delay = 20  # 空闲视频等待时间
+    to_khs_down = 60 - offset_down  # 下盘转到可回收口的角度q
+    to_yh_down = 60 - 90 + offset_down  # 下盘转到有害口的角度
+    to_qt_down = 60 - 180  # 下盘转到其他口的角度
+    to_cy_down = 60 + 90  # 下盘转到厨q余口的角度
+
+    to_khs_up = -120 - offset - offset_down  # 上盘转到可回收口的角度
+    to_cy_up = -30 - offset  # 上盘转到厨余口的角度
+    to_qt_up = -30 + 90 + offset  # 上盘转到其他口的角度
+    to_yh_up = -30 + 180 + offset + offset_down  # 上盘转到有害口的角度
 
     ### 变量
     sight_pos = 1  # 当前视角位置 一共六格
@@ -418,10 +465,23 @@ class MissionThread(QObject):
         self.cali_target = 0
         self.cali_list = [api.STEP1, api.STEP2, api.STEP3]
         sig.key_event_signal.connect(self.key_event)
+        self.baseline = None
 
     def show_image(self, image: np.ndarray):
         self._image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         sig.image_signal.emit(self._image)
+
+    def update_bin_process(self):
+        rd = laser_read_all()
+        if self.baseline is None:
+            for i in range(2):
+                rd = laser_read_all()
+            self.baseline = rd
+        p1 = 90 if rd[3] < self.baseline[3] * 0.85 else 10
+        p2 = 90 if rd[2] < self.baseline[2] * 0.85 else 10
+        p3 = 90 if rd[4] < self.baseline[4] * 0.85 else 10
+        p4 = 90 if rd[0] < self.baseline[0] * 0.85 else 10
+        sig.update_bin_progress_signal.emit(p1, p2, p3, p4)
 
     def open_camera(self):
         while True:
@@ -442,10 +502,11 @@ class MissionThread(QObject):
 
     def run(self):
         self.system_info("等待控制器连接中...")
-        # api.wait_for_connection(-1)
+        api.wait_for_connection(-1)
         self.system_info("控制器连接成功")
-        time.sleep(1)
-        api.step_set_speed(api.STEP1 | api.STEP2, self.rotation_speed)
+        self.update_bin_process()
+        api.step_set_speed(api.STEP1, self.rotation_speed_up)
+        api.step_set_speed(api.STEP2, self.rotation_speed_down)
         api.step_set_speed(api.STEP3, self.push_speed)
         self.open_camera()
         sig.cam_thread_start_signal.emit()
@@ -538,8 +599,11 @@ class MissionThread(QObject):
         global cam_img
         last_recognize_time = time.time()
         playing_video = False
+        yolo = DAMO_YOLO(drawOutput=True)
         while True:
             time.sleep(0.01)
+            while self.calibrating:
+                time.sleep(0.1)
             if (
                 self.idle
                 and time.time() - last_recognize_time > self.idle_delay
@@ -552,11 +616,75 @@ class MissionThread(QObject):
                 playing_video = False
                 sig.stop_video_signal.emit()
                 self.system_info("空闲")
+            deg = round(api.state.step1_target_angle.value / 60) * 60
+            api.step_rotate_abs(api.STEP1, deg + 40)
+            self.update_bin_process()
+            api.wait_for_step_idle(api.STEP1)
+            cam_event.clear()
             cam_event.wait()
             cam_event.clear()
-            img = cam_img
+            img = cam_img.copy()
+            api.step_rotate_abs(api.STEP1, deg + 60)
             if not playing_video:
-                self.show_image(img)
+                self.system_info("识别中 ...")
+                frame = mask_ROI(
+                    img,
+                    (
+                        (831, 186),
+                        (550, 589),
+                        (736, 711),
+                        (913, 740),
+                        (1097, 711),
+                        (1249, 616),
+                        (994, 186),
+                    ),
+                )
+                result = yolo.detect(frame)
+
+                if not playing_video:
+                    self.show_image(frame)
+                if len(result) == 0:
+                    self.idle = True
+                    continue
+                self.idle = False
+                if playing_video:
+                    playing_video = False
+                    sig.stop_video_signal.emit()
+                    self.system_info("识别到垃圾")
+                    self.show_image(frame)
+                logger.info(f"识别结果: {result}")
+                if len(result) > 1:
+                    result = sorted(result, key=lambda x: x[2], reverse=True)
+                name = translate[result[0][1]]
+                category = categories[name]
+                sig.set_recognize_result_signal.emit(name)
+                sig.add_recognized_item_signal.emit(name)
+                if category == "可回收垃圾":
+                    api.step_rotate(api.STEP2, self.to_khs_down)
+                    api.wait_for_step_idle(api.STEP2)
+                    api.step_rotate(api.STEP1, self.to_khs_up)
+                elif category == "有害垃圾":
+                    api.step_rotate(api.STEP2, self.to_yh_down)
+                    api.wait_for_step_idle(api.STEP2)
+                    api.step_rotate(api.STEP1, self.to_yh_up)
+                elif category == "厨余垃圾":
+                    api.step_rotate(api.STEP2, self.to_cy_down)
+                    api.wait_for_step_idle(api.STEP2)
+                    api.step_rotate(api.STEP1, self.to_cy_up)
+                elif category == "其他垃圾":
+                    api.step_rotate(api.STEP2, self.to_qt_down)
+                    api.wait_for_step_idle(api.STEP2)
+                    api.step_rotate(api.STEP1, self.to_qt_up)
+                else:
+                    raise ValueError(f"Invalid category: {category}")
+                api.wait_for_step_idle(api.STEP1 | api.STEP2)
+                time.sleep(2)
+                api.step_rotate_abs(api.STEP2, 0)
+                api.wait_for_step_idle(api.STEP2)
+                deg = round(api.state.step1_target_angle.value / 60) * 60
+                api.step_rotate_abs(api.STEP1, deg)
+                api.wait_for_step_idle(api.STEP1 | api.STEP2)
+                last_recognize_time = time.time()
 
 
 if __name__ == "__main__":
@@ -564,4 +692,7 @@ if __name__ == "__main__":
     app.setStyleSheet(qdarktheme.load_stylesheet(theme="dark"))
     window = MainWindow()
     window.show()
+    app.exec()
+    app.exec()
+    app.exec()
     app.exec()

@@ -3,7 +3,8 @@ from typing import List, Optional, Tuple, Union
 
 import cv2
 import numpy as np
-from pyzbar import pyzbar
+
+# from pyzbar import pyzbar
 from scipy import ndimage
 
 _DEBUG = False
@@ -678,7 +679,7 @@ class Meanshift(object):
 __bs = None
 
 
-def mixed_background_sub(frame) -> Tuple[bool, list[tuple[float, float]]]:
+def mixed_background_sub(frame):
     """
     混合高斯运动检测
     frame: 输入帧
@@ -758,8 +759,8 @@ def init_hsv_selector():
     """
     (调试工具) 初始化HSV颜色选择器
     """
-    cv2.namedWindow("Selector", cv2.WINDOW_NORMAL)
-    cv2.namedWindow("HSV_img", cv2.WINDOW_AUTOSIZE)
+    cv2.namedWindow("Selector", cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
+    cv2.namedWindow("HSV_img", cv2.WINDOW_NORMAL | cv2.WINDOW_KEEPRATIO)
     nothing = lambda x: 0
     cv2.createTrackbar("H_l", "Selector", 0, 255, nothing)
     cv2.createTrackbar("H_h", "Selector", 0, 255, nothing)
@@ -932,3 +933,14 @@ def stack_images(imgArray, scale=0.5, lables=[]) -> np.ndarray:
                     1,
                 )
     return ver
+
+
+def mask_ROI(img, roi_pts: Tuple[Tuple[int, int], ...]):
+    """
+    Returns a image filled black outside the polygon
+    roi pts: ((x1, y1), (x2, y2), (x3, y3), ...)
+    """
+    mask = np.zeros_like(img)
+    cv2.fillPoly(mask, np.array([roi_pts]), (255, 255, 255))
+    masked_img = cv2.bitwise_and(img, mask)
+    return masked_img

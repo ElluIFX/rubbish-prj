@@ -354,6 +354,7 @@ class DAMO_YOLO(object):
             ret.append((center, self.classes[class_id], score))
             if self.drawOutput:
                 frame = draw_pred(frame, self.classes[class_id], score, x1, y1, x2, y2)
+        return ret
 
 
 class HAWP(object):
