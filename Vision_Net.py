@@ -71,7 +71,7 @@ def draw_pred(frame, class_name, conf, left, top, right, bottom):
         (0, 255, 0),
         thickness=2,
     )
-
+    return frame
 
 class QRScanner_Yolo(object):
     def __init__(self, confThreshold=0.6, nmsThreshold=0.5, drawOutput=False):
@@ -353,7 +353,7 @@ class DAMO_YOLO(object):
             score, class_id = confidences[i], classIds[i]
             ret.append((center, self.classes[class_id], score))
             if self.drawOutput:
-                frame = draw_pred(frame, self.classes[class_id], score, x1, y1, x2, y2)
+                draw_pred(frame, self.classes[class_id], score, x1, y1, x2, y2)
         return ret
 
 

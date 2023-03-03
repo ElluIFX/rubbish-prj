@@ -72,14 +72,14 @@ import cv2
 import numpy as np
 import qdarktheme
 import skvideo.io
-from H750_STEP.python_sdk.FlightController import FC_Controller, logger
-from rubbish_gui import Ui_MainWindow
 from smbus2 import SMBus
-from Vision import mask_ROI
-from Vision_Net import DAMO_YOLO
 
 from drivers.pca9548a import PCA9548A
 from drivers.vl53l0x import VL53L0X
+from H750_STEP.python_sdk.FlightController import FC_Controller, logger
+from rubbish_gui import Ui_MainWindow
+from Vision import mask_ROI
+from Vision_Net import DAMO_YOLO
 
 colors = {
     "可回收垃圾": "#80EB57",
@@ -149,6 +149,7 @@ api.start_listen_serial("/dev/ttyS4", 500000, print_state=False)
 api.settings.strict_ack_check = False
 mux = PCA9548A(BusNum=7)
 lasers = []
+laser_state = []
 LASER_NUM = 6
 
 for i in range(LASER_NUM):
@@ -156,8 +157,11 @@ for i in range(LASER_NUM):
     time.sleep(0.1)
     try:
         lasers.append(VL53L0X(bus=7))
+        laser_state.append(True)
     except:
         logger.error(f"Failed to initialize laser {i}")
+        lasers.append(None)
+        laser_state.append(False)
         pass
 
 
@@ -175,17 +179,20 @@ def set_bar_color(widget, rgb):
 
 def laser_read(i):
     mux.switch(i)
-    return lasers[i].measure()
+    try:
+        ret = lasers[i].measure()
+        laser_state[i] = True
+        return ret
+    except:
+        logger.error(f"Failed to read laser {i}")
+        laser_state[i] = False
+        return 1e6
 
 
 def laser_read_all():
     rd = []
     for i in range(LASER_NUM):
-        try:
-            rd.append(laser_read(i))
-        except:
-            rd.append(1000)
-            logger.error(f"Failed to read laser {i}")
+        rd.append(laser_read(i))
     return rd
 
 
@@ -360,6 +367,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.show_image(frame)
         except StopIteration:
             self.stop_video()
+            self.start_video()
 
     def show_image(self, image: np.ndarray):
         fpsc.tick()
@@ -438,9 +446,9 @@ class MissionThread(QObject):
     ### 设置
     rotation_speed_up = 60
     rotation_speed_down = 40
-    push_speed = 200
+    push_speed = 250
     rec_offset = 105
-    max_push = 7000
+    max_push = 7500
     offset = 10
     offset_down = 10
     idle_delay = 20  # 空闲视频等待时间
@@ -477,10 +485,10 @@ class MissionThread(QObject):
             for i in range(2):
                 rd = laser_read_all()
             self.baseline = rd
-        p1 = 90 if rd[3] < self.baseline[3] * 0.85 else 10
-        p2 = 90 if rd[2] < self.baseline[2] * 0.85 else 10
-        p3 = 90 if rd[4] < self.baseline[4] * 0.85 else 10
-        p4 = 90 if rd[0] < self.baseline[0] * 0.85 else 10
+        p1 = 90 if rd[3] < self.baseline[3] * 0.9 else 10
+        p2 = 90 if rd[2] < self.baseline[2] * 0.9 else 10
+        p3 = 90 if rd[4] < self.baseline[4] * 0.9 else 10
+        p4 = 90 if rd[0] < self.baseline[0] * 0.9 else 10
         sig.update_bin_progress_signal.emit(p1, p2, p3, p4)
 
     def open_camera(self):
@@ -572,34 +580,11 @@ class MissionThread(QObject):
     def system_info(self, text):
         sig.set_system_status_signal.emit(text)
 
-    def left(self):
-        self.sight_pos = (self.sight_pos + 1) % 6
-        api.step_rotate_abs(api.STEP1, self.sight_pos * 60)
-        api.step_rotate_abs(api.STEP2, (self.sight_pos - self.down_pos) * 60)
-        api.wait_for_step_idle(api.STEP1 | api.STEP2)
-
-    def right(self):
-        self.sight_pos = (self.sight_pos - 1) % 6
-        api.step_rotate_abs(api.STEP1, self.sight_pos * 60)
-        api.step_rotate_abs(api.STEP2, (self.sight_pos - self.down_pos) * 60)
-        api.wait_for_step_idle(api.STEP1 | api.STEP2)
-
-    def goto(self, pos):
-        self.sight_pos = pos
-        api.step_rotate_abs(api.STEP1, self.sight_pos * 60)
-        api.step_rotate_abs(api.STEP2, (self.sight_pos - self.down_pos) * 60)
-        api.wait_for_step_idle(api.STEP1 | api.STEP2)
-
-    def release_next(self):
-        self.down_pos = self.down_pos + 1
-        api.step_rotate_abs(api.STEP2, (self.sight_pos - self.down_pos) * 60)
-        api.wait_for_step_idle(api.STEP2)
-
     def work(self):
         global cam_img
         last_recognize_time = time.time()
         playing_video = False
-        yolo = DAMO_YOLO(drawOutput=True)
+        yolo = DAMO_YOLO(drawOutput=True, confThreshold=0.4)
         count = 0
         while True:
             time.sleep(0.01)
@@ -613,31 +598,44 @@ class MissionThread(QObject):
                 playing_video = True
                 sig.start_video_signal.emit()
                 self.system_info("播放公益视频")
-            elif playing_video and not self.idle:
-                playing_video = False
-                sig.stop_video_signal.emit()
-                self.system_info("空闲")
+
+            if laser_state[5] and playing_video:
+                last_max_time = time.perf_counter()
+                while True:
+                    if not laser_state[5]:
+                        break
+                    m = laser_read(5)
+                    if m > 2000:
+                        last_max_time = time.perf_counter()
+                    if time.perf_counter() - last_max_time > 1:
+                        playing_video = False
+                        sig.stop_video_signal.emit()
+                        self.system_info("识别中...")
+                        break
+                    time.sleep(0.001)
+
             deg = round(api.state.step1_target_angle.value / 60) * 60
             api.step_rotate_abs(api.STEP1, deg + 40)
             self.update_bin_process()
             api.wait_for_step_idle(api.STEP1)
+            time.sleep(0.2)
             cam_event.clear()
             cam_event.wait()
             cam_event.clear()
             img = cam_img.copy()
             api.step_rotate_abs(api.STEP1, deg + 60)
             if not playing_video:
-                self.system_info("识别中 ...")
+                self.system_info("识别中...")
             frame = mask_ROI(
                 img,
                 (
-                    (831, 186),
-                    (550, 589),
-                    (736, 711),
-                    (913, 740),
-                    (1097, 711),
-                    (1249, 616),
-                    (994, 186),
+                    (831 - 20, 186),
+                    (550 - 10, 589),
+                    (736 - 5, 711 + 10),
+                    (913, 740 + 10),
+                    (1097 + 5, 711 + 10),
+                    (1249 + 10, 616),
+                    (994 + 20, 186),
                 ),
             )
             result = yolo.detect(frame)
@@ -648,10 +646,10 @@ class MissionThread(QObject):
                 self.idle = True
                 continue
             self.idle = False
+            self.system_info("识别到垃圾")
             if playing_video:
                 playing_video = False
                 sig.stop_video_signal.emit()
-                self.system_info("识别到垃圾")
                 self.show_image(frame)
             logger.info(f"识别结果: {result}")
             if len(result) > 1:
@@ -679,6 +677,7 @@ class MissionThread(QObject):
             else:
                 raise ValueError(f"Invalid category: {category}")
             api.wait_for_step_idle(api.STEP1 | api.STEP2)
+            self.system_info("投放完成")
             time.sleep(2)
             api.step_rotate_abs(api.STEP2, 0)
             api.wait_for_step_idle(api.STEP2)
@@ -688,13 +687,23 @@ class MissionThread(QObject):
             last_recognize_time = time.time()
             count += 1
             if count == 10:
-                self.system_info("正在压缩可回收垃圾")
                 count = 0
+                self.system_info("正在压缩可回收垃圾")
                 self.compress()
                 self.system_info("压缩完成")
+                time.sleep(1)
 
-        def compress(self):
-            pass
+    def compress(self):
+        zero_distance = laser_read(1)
+        api.step_rotate_abs(api.STEP3, self.max_push)
+        api.wait_for_step_idle()
+        api.step_rotate_abs(api.STEP3, 0)
+        while api.state.step3_rotating:
+            time.sleep(0.1)
+            if zero_distance - laser_read(1) < 10:
+                api.step_stop(api.STEP3)
+                break
+        api.step_set_angle(api.STEP3, 0)
 
 
 if __name__ == "__main__":
