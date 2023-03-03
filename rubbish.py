@@ -66,6 +66,7 @@ import shutil
 import sys
 import time
 import warnings
+from threading import Event
 
 import cv2
 import numpy as np
@@ -111,6 +112,20 @@ category = {
     "瓷片": "其他垃圾",
     "鹅卵石": "其他垃圾",
 }
+translate = {
+    "battery_1": "1号电池",
+    "battery_2": "2号电池",
+    "battery_5": "5号电池",
+    "medicine": "过期药物",
+    "can": "易拉罐",
+    "bottle": "矿泉水瓶",
+    "potato": "小土豆",
+    "white_carrot": "白萝卜",
+    "carrot": "胡萝卜",
+    "tile": "瓷片",
+    "rock": "鹅卵石",
+}
+
 item_list = list(category.keys())
 video_file = r"test_h264.mp4"
 videoCapture = cv2.VideoCapture(video_file)
@@ -120,8 +135,13 @@ video_width = int(videoCapture.get(cv2.CAP_PROP_FRAME_WIDTH))
 video_height = int(videoCapture.get(cv2.CAP_PROP_FRAME_HEIGHT))
 videoCapture.release()
 cam = cv2.VideoCapture()
+cam_img = None
+cam_width = 1920
+cam_height = 1080
+cam_event = Event()
 api = FC_Controller()
-# api.start_listen_serial("COM11", 115200)
+api.start_listen_serial("COM3", 115200)
+api.settings.strict_ack_check = False
 
 
 def set_color(widget, rgb):
@@ -163,6 +183,9 @@ fpsc = fps_counter()
 
 
 class MySignal(QObject):
+    def __init__(self, parent=None):
+        super(MySignal, self).__init__(parent)
+
     image_signal = Signal(np.ndarray)
     start_processbar_signal = Signal(int)
     finish_processbar_signal = Signal()
@@ -172,6 +195,8 @@ class MySignal(QObject):
     add_recognized_item_signal = Signal(str, str)
     start_video_signal = Signal()
     stop_video_signal = Signal()
+    cam_thread_start_signal = Signal()
+    key_event_signal = Signal(int)
 
 
 sig = MySignal()
@@ -188,7 +213,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setGeometry(0, 0, 1024, 700)
         self.misThread.start()
         self.image_temp = None
-        self.update_bin_progress(90, 80, 40, 20)
+        self.update_bin_progress(20, 20, 20, 20)
 
     def init_timers(self):
         self.processbar_timer = QTimer()
@@ -199,9 +224,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def init_threads(self):
         self.misThread = QThread()
-        self.worker = MissionThread()
-        self.worker.moveToThread(self.misThread)
-        self.misThread.started.connect(self.worker.run)
+        self.misWorker = MissionThread()
+        self.misWorker.moveToThread(self.misThread)
+        self.misThread.started.connect(self.misWorker.run)
+        self.camThread = QThread()
+        self.camWorker = CameraThread()
+        self.camWorker.moveToThread(self.camThread)
+        self.camThread.started.connect(self.camWorker.run)
 
     def init_signals(self):
         sig.image_signal.connect(self.show_image)
@@ -213,6 +242,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         sig.set_system_status_signal.connect(self.set_system_status)
         sig.start_video_signal.connect(self.start_video)
         sig.stop_video_signal.connect(self.stop_video)
+        sig.cam_thread_start_signal.connect(self.camThread.start)
 
     def init_widgets(self):
         set_bar_color(self.progressBin1, colors["可回收垃圾"])
@@ -280,11 +310,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.listWidgetLog.scrollToBottom()
 
     def start_video(self):
-        time.sleep(1)
+        logger.info("start video")
         self.videogen = skvideo.io.vreader(video_file)
-        self.video_timer.start(1000 / video_fps)
+        self.video_timer.start(int(1000 / video_fps))
 
     def stop_video(self):
+        logger.info("stop video")
         self.video_timer.stop()
         self.videogen.close()
 
@@ -340,6 +371,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 self.showNormal()
             else:
                 self.showFullScreen()
+        sig.key_event_signal.emit(int(event.key()))
         return super().keyPressEvent(event)
 
     def closeEvent(self, event) -> None:
@@ -347,50 +379,137 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         return super().closeEvent(event)
 
 
+class CameraThread(QObject):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+    def run(self):
+        global cam_img, cam
+        logger.info("Camera thread started")
+        while True:
+            if not cam.isOpened():
+                time.sleep(0.1)
+                continue
+            ret, frame = cam.read()
+            if ret:
+                cam_img = frame.copy()
+                cam_event.set()
+            else:
+                time.sleep(0.1)
+                logger.warn("Camera read failed")
+
+
 class MissionThread(QObject):
     ### 设置
-    rotation_speed = 45
+    rotation_speed = 60
+    push_speed = 200
+    rec_offset = 105
+    max_push = 7000
+    idle_delay = 30  # 空闲视频等待时间
 
     ### 变量
     sight_pos = 1  # 当前视角位置 一共六格
     down_pos = 0  # 下盘位置 一共六格
+    idle = True  # 是否空闲
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.calibrating = False
+        self.cali_target = 0
+        self.cali_list = [api.STEP1, api.STEP2, api.STEP3]
+        sig.key_event_signal.connect(self.key_event)
 
     def show_image(self, image: np.ndarray):
         self._image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         sig.image_signal.emit(self._image)
 
-    def run(self):
+    def open_camera(self):
         while True:
-            for i in range(0, 10):
+            for i in range(1, 10):
                 cam.open(i)
                 if cam.isOpened():
                     logger.info(f"Opened camera {i}")
                     break
             if not cam.isOpened():
                 logger.warn("No camera found")
-                sig.set_system_status_signal.emit(f"错误: 未找到摄像头")
+                self.system_info(f"等待摄像头连接中...")
             else:
-                sig.set_system_status_signal.emit(f"摄像头已连接")
+                cam.set(cv2.CAP_PROP_FRAME_WIDTH, cam_width)
+                cam.set(cv2.CAP_PROP_FRAME_HEIGHT, cam_height)
+                self.system_info(f"摄像头已连接(ID:{i})")
+                time.sleep(1)
                 break
+
+    def run(self):
+        self.system_info("等待控制器连接中...")
+        # api.wait_for_connection(-1)
+        self.system_info("控制器连接成功")
+        time.sleep(1)
+        api.step_set_speed(api.STEP1 | api.STEP2, self.rotation_speed)
+        api.step_set_speed(api.STEP3, self.push_speed)
+        self.open_camera()
+        sig.cam_thread_start_signal.emit()
+        self.calibrate()
         while True:
             try:
                 self.work()
             except Exception as e:
-                sig.set_system_status_signal.emit(f"任务线程异常, 正在重启...")
+                self.system_info(f"任务线程异常, 正在重启...")
                 logger.exception(e)
                 time.sleep(1)
             else:
-                sig.set_system_status_signal.emit("任务线程正常退出")
+                self.system_info("任务线程正常退出")
                 break
 
-    def calibration(self):
-        sig.set_system_status_signal.emit("正在校准储物盘")
+    def calibrate(self):
+        global cam_img
+        self.calibrating = True
+        api.settings.check_idle = False
+        self.system_info(f"正在校准电机-{self.cali_target}")
+        while self.calibrating:
+            cam_event.wait()
+            cam_event.clear()
+            frame = cam_img
+            self.show_image(frame)
+        self.show_image(np.zeros((cam_height, cam_width, 3), dtype=np.uint8))
         time.sleep(1)
-        sig.set_system_status_signal.emit("校准完成")
-        time.sleep(1)
+
+    def key_event(self, key: int):
+        if self.calibrating:
+            if key == int(Qt.Key_X):
+                self.calibrating = False
+                self.system_info("校准完成")
+                api.settings.check_idle = True
+                api.step_set_angle(api.STEP1 | api.STEP2 | api.STEP3, 0)
+            elif key == int(Qt.Key_W):
+                self.cali_target = (self.cali_target + 1) % len(self.cali_list)
+                self.system_info(f"正在校准电机-{self.cali_target}")
+            elif key == int(Qt.Key_S):
+                self.cali_target = (self.cali_target - 1) % len(self.cali_list)
+                self.system_info(f"正在校准电机-{self.cali_target}")
+            elif key == int(Qt.Key_A):
+                api.step_rotate(self.cali_list[self.cali_target], -1)
+            elif key == int(Qt.Key_D):
+                api.step_rotate(self.cali_list[self.cali_target], 1)
+            elif key == int(Qt.Key_Q):
+                api.step_rotate(self.cali_list[self.cali_target], -60)
+            elif key == int(Qt.Key_E):
+                api.step_rotate(self.cali_list[self.cali_target], 60)
+            elif key == int(Qt.Key_Z):
+                api.step_rotate(self.cali_list[self.cali_target], -200)
+            elif key == int(Qt.Key_C):
+                api.step_rotate(self.cali_list[self.cali_target], 200)
+        else:
+            if key == int(Qt.Key_X):
+                self.calibrating = True
+                self.system_info(f"进入临时校准模式")
+                api.settings.check_idle = False
+        if key == int(Qt.Key_O):
+            self.idle = not self.idle
+            logger.debug(f"Idle: {self.idle}")
+
+    def system_info(self, text):
+        sig.set_system_status_signal.emit(text)
 
     def left(self):
         self.sight_pos = (self.sight_pos + 1) % 6
@@ -416,19 +535,28 @@ class MissionThread(QObject):
         api.wait_for_step_idle(api.STEP2)
 
     def work(self):
-        # while True:
-        #     ret, frame = cam.read()
-        #     if not ret:
-        #         continue
-        #     self.show_image(frame)
-        sig.start_video_signal.emit()
-        # time.sleep(1)
-        # sig.set_system_status_signal.emit("等待控制器连接中...")
-        # api.wait_for_connection(-1)
-        # sig.set_system_status_signal.emit("控制器连接成功")
-        # api.step_set_speed(api.STEP1 | api.STEP2, self.rotation_speed)
-        # time.sleep(1)
-        # self.calibration()
+        global cam_img
+        last_recognize_time = time.time()
+        playing_video = False
+        while True:
+            time.sleep(0.01)
+            if (
+                self.idle
+                and time.time() - last_recognize_time > self.idle_delay
+                and not playing_video
+            ):
+                playing_video = True
+                sig.start_video_signal.emit()
+                self.system_info("播放公益视频")
+            elif playing_video and not self.idle:
+                playing_video = False
+                sig.stop_video_signal.emit()
+                self.system_info("空闲")
+            cam_event.wait()
+            cam_event.clear()
+            img = cam_img
+            if not playing_video:
+                self.show_image(img)
 
 
 if __name__ == "__main__":
